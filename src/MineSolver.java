@@ -1,9 +1,12 @@
+package src;
 import java.util.*;
+import java.util.HashMap;
+import Jama.Matrix;
 
-public class MinesweeperSolver {
+public class MineSolver {
     Set<MinesweeperBoard> boards;
 
-    public MinesweeperSolver(MinesweeperBoard board) {
+    public MineSolver(MinesweeperBoard board) {
         boards = new HashSet<>();
         solve(board);
     }
@@ -27,11 +30,73 @@ public class MinesweeperSolver {
         
         return neighbors;
     }
+    public ArrayList<int[]> getUnmarkUnsatNeighbors(MinesweeperBoard board, int x, int y){
+        ArrayList<int[]> neighbors = new ArrayList<>();
+        
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) {
+                    continue;
+                }
+                
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx >= 0 && nx < board.getWidth() && ny >= 0 && ny < board.getHeight() && board.getRevealed()[nx][ny] && numLeft(board,nx,ny) != 0) {
+                    neighbors.add(new int[]{nx, ny});
+                }
+            }
+        }
+        
+        return neighbors;
+    }
+    public ArrayList<int[]> getUnflagNeighbors(MinesweeperBoard board, int x, int y){
+        ArrayList<int[]> neighbors = new ArrayList<>();
+        
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) {
+                    continue;
+                }
+                
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx >= 0 && nx < board.getWidth() && ny >= 0 && ny < board.getHeight() && !board.getFlagged()[nx][ny] && !board.getRevealed()[nx][ny]) {
+                    neighbors.add(new int[]{nx, ny});
+                }
+            }
+        }
+        
+        return neighbors;
+    }
+    public ArrayList<int[]> getFlagNeighbors(MinesweeperBoard board, int x, int y){
+        ArrayList<int[]> neighbors = new ArrayList<>();
+        
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) {
+                    continue;
+                }
+                
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx >= 0 && nx < board.getWidth() && ny >= 0 && ny < board.getHeight() && board.getFlagged()[nx][ny]) {
+                    neighbors.add(new int[]{nx, ny});
+                }
+            }
+        }
+        
+        return neighbors;
+    }
     public void displaySolutions() {
         for (MinesweeperBoard board : boards) {
             board.displayBoard();
             System.out.println();
         }
+    }
+
+    public int numLeft(MinesweeperBoard board, int x, int y){
+        ArrayList<int[]> n = getFlagNeighbors(board, x, y);
+        return board.getBoard()[x][y]-n.size();
     }
 
     static int fact(int number) {  
@@ -43,13 +108,6 @@ public class MinesweeperSolver {
         }  
         return f;  
     }
-    class intArrComparator implements Comparator<int[]>{
-        @Override
-        public int compare(int[] o1, int[] o2) {
-            if (o1[0] > o2[0]) { return 1;}
-            return 0; 
-        }  
-    } 
     static void combinationDriver(ArrayList<int[]> arr, int n, int r, ArrayList<ArrayList<int[]>> combos) {
         ArrayList<int[]> data = new ArrayList<>();
 
@@ -85,8 +143,8 @@ public class MinesweeperSolver {
     }
     
     public void solve(MinesweeperBoard board) {
-        board.uncoverCell(0,0); //uncover cell in corner of board
-        solver(board, 0, 0);
+        board.uncoverCell((int)board.getWidth()/2,(int)board.getHeight()/2); //uncover cell in corner of board
+        solver(board,(int)board.getWidth()/2,(int)board.getHeight()/2);
         //displaySolutions();
     }
     public void solver(MinesweeperBoard board, int x, int y){
@@ -135,6 +193,7 @@ public class MinesweeperSolver {
             return;
         }
         if (board.getBoard()[x][y] == 0){
+            board.satisfyCell(x,y);
             for (int[] neighbor : neighbors){
                 int w = neighbor[0];
                 int h = neighbor[1];
@@ -146,6 +205,7 @@ public class MinesweeperSolver {
 
         }
         if (board.getBoard()[x][y] == flag){
+            board.satisfyCell(x,y);
             for (int[] neighbor : neighbors){
                 int w = neighbor[0];
                 int h = neighbor[1];
@@ -156,6 +216,80 @@ public class MinesweeperSolver {
             }
         }
         if (board.getBoard()[x][y] - flag > 0){
+            ArrayList<int[]> tanNeigh = getUnmarkUnsatNeighbors(board,x,y);
+            int m = 2;
+            ArrayList<ArrayList<ArrayList<Integer>>> coeffs = new ArrayList<>();
+            HashSet<ArrayList<Integer>> cells = new HashSet<>();
+            double[] needs = new double[2];
+            int s = 0;
+            for (int[] tanN : tanNeigh){
+                int ne = numLeft(board,tanN[0],tanN[1]);
+                ArrayList<ArrayList<Integer>> unflag = new ArrayList<>();
+                ArrayList<int[]> unflagNeigh = getUnflagNeighbors(board,tanN[0],tanN[1]);
+                for (int[] n : unflagNeigh){
+                    ArrayList<Integer> cell = new ArrayList<>();
+                    
+                    cell.add(n[0]);
+                    cell.add(n[1]);
+                    unflag.add(cell);
+                    cells.add(cell);
+                }
+                coeffs.add(unflag);
+                needs[s%2] = ne;
+                s++;
+                ne = numLeft(board,x,y);
+                unflag = new ArrayList<>();
+                unflagNeigh = getUnflagNeighbors(board,x,y);
+                for (int[] n : unflagNeigh){
+                    ArrayList<Integer> cell = new ArrayList<>();
+                    
+                    cell.add(n[0]);
+                    cell.add(n[1]);
+                    unflag.add(cell);
+                    cells.add(cell);
+                }
+                coeffs.add(unflag);
+                needs[s%2] = ne;
+                s++;
+                double[][] matrix = new double[m][cells.size()];
+                for (int i = 0; i < m; i++){
+                    ArrayList<Integer> row = new ArrayList<>();
+                    //matrix[i] = new int[cells.size()];
+                    int j = 0;
+                    for (ArrayList<Integer> r: cells){
+                        if (coeffs.get(i).contains(r)){
+                            matrix[i][j] = 1;
+                        }else{
+                            matrix[i][j] = 0;
+                        }
+                        j++;
+                    }
+                }
+                Matrix newMat = new Matrix(matrix);
+                Matrix newb = new Matrix(needs, needs.length);
+                if (newMat.rank() < newMat.getColumnDimension()) {
+                    //System.out.println("System of equations is rank deficient. Cannot solve.");
+                    continue;
+                }
+                else { 
+                    //System.out.println("System of equations is not rank deficient!");
+                    Matrix solution = newMat.solve(newb);
+                    //System.out.print("solution: \n");
+                    //solution.print(5,2);
+                    double [][] sol = solution.getArray();
+                    //System.out.println(cells);
+                    int i = 0;
+                    for (ArrayList<Integer> r: cells){
+                        if(sol[i][0] > 0){
+                            board.flagCell(r.get(0),r.get(1));
+                        }
+                        else {
+                            board.uncoverCell(r.get(0),r.get(1));
+                        }
+                    }
+                    solver(board, x, y);
+                }
+            }
             ArrayList<ArrayList<int[]>> combos = new ArrayList<>();
             ArrayList<int[]> neighborNoFlag = new ArrayList<>();
             ArrayList<int[]> neighborFlag = new ArrayList<>();
@@ -184,13 +318,6 @@ public class MinesweeperSolver {
                         solver(tempBoard, w, h);
                     }
                 }
-            /*int h = neighbor[1];
-            if (!board.getFlagged()[w][h]){
-                System.out.println("splitting: "+flag);
-                MinesweeperBoard tempBoard = new MinesweeperBoard(board);
-                tempBoard.uncoverCell(w, h);
-                solver(tempBoard, w, h);
-            }*/
             }
         }
         if (board.getBoard()[x][y] == c){

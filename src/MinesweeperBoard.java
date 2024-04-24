@@ -1,9 +1,11 @@
+package src;
 import java.util.*;
 
 public class MinesweeperBoard {
     private int[][] board;
     private boolean[][] revealed;
     private boolean[][] flagged;
+    private boolean[][] satisfied;
     private int width;
     private int height;
     private int numMines;
@@ -18,6 +20,8 @@ public class MinesweeperBoard {
         copyBoolBoard(this.revealed, board.getRevealed());
         this.flagged = new boolean[board.getWidth()][board.getHeight()];
         copyBoolBoard(this.flagged, board.getFlagged());
+        this.satisfied = new boolean[board.getWidth()][board.getHeight()];
+        copyBoolBoard(this.satisfied, board.getSatisfied());
     }
     
     public MinesweeperBoard(int width, int height, int numMines) {
@@ -27,6 +31,7 @@ public class MinesweeperBoard {
         this.board = new int[width][height];
         this.revealed = new boolean[width][height];
         this.flagged = new boolean[width][height];
+        this.satisfied = new boolean[width][height];
         initializeBoard();
     }
 
@@ -68,6 +73,10 @@ public class MinesweeperBoard {
 
     public boolean[][] getFlagged() {
         return flagged;
+    }
+
+    public boolean[][] getSatisfied() {
+        return satisfied;
     }
 
     public int getValue(int x, int y) {
@@ -156,6 +165,9 @@ public class MinesweeperBoard {
     
     public void flagCell(int x, int y) {
         flagged[x][y] = true;
+    }
+    public void satisfyCell(int x, int y) {
+        satisfied[x][y] = true;
     }
 
     public ArrayList<int[]> anyLeft() {
