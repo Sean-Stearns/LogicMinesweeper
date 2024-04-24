@@ -1,7 +1,7 @@
 package src;
 class Main {
     public static void main(String[] args) {
-        MinesweeperBoard board = new MinesweeperBoard(9, 9, 9);
+        MinesweeperBoard board = new MinesweeperBoard(9, 9, 10);
         board.displayBoard();
         long startTime = System.nanoTime();
         MinesweeperSolver solver = new MinesweeperSolver(board);

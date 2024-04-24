@@ -8,7 +8,7 @@ public class MinesweeperSolver {
         boards = new HashSet<>();
         solve(board);
     }
-    public ArrayList<int[]> getNeighbors(MinesweeperBoard board, int x, int y, int[] count){
+    public ArrayList<int[]> getNeighbors(MinesweeperBoard board, int x, int y){
         ArrayList<int[]> neighbors = new ArrayList<>();
         
         for (int dx = -1; dx <= 1; dx++) {
@@ -21,7 +21,6 @@ public class MinesweeperSolver {
                 int ny = y + dy;
                 if (nx >= 0 && nx < board.getWidth() && ny >= 0 && ny < board.getHeight() && !board.getRevealed()[nx][ny]) {
                     neighbors.add(new int[]{nx, ny});
-                    count[0]++;
                 }
             }
         }
@@ -200,7 +199,7 @@ public class MinesweeperSolver {
     public void solve(MinesweeperBoard board) {
         int x = (int)board.getWidth()/2;
         int y = (int)board.getHeight()/2;
-        ArrayList<int[]> neighbors = getNeighbors(board, x, y, new int[]{0});
+        ArrayList<int[]> neighbors = getNeighbors(board, x, y);
         int g = 1;
         while (board.getBoard()[x][y] == -1){
             System.out.println("Guess "+g+" was a bomb, trying again");
@@ -228,16 +227,33 @@ public class MinesweeperSolver {
                 }
             }
         }
-        ArrayList<int[]> left = board.anyLeft();
-
-        if (left.size()==0 && bombs == board.getNumMines()){
+        if (bombs > board.getNumMines()){return;}
+        if (board.anyLeft().size()==0 && bombs == board.getNumMines()){
             boards.add(board); 
             return;
         }
-        if (bombs > board.getNumMines()){ return; }
-        int[] count = {0};
-        ArrayList<int[]> neighbors = getNeighbors(board,x,y,count);
-        int c = count[0];
+        ArrayList<int[]> neighbors = getNeighbors(board,x,y);
+        int c = neighbors.size();
+        if (board.getBoard()[x][y] == 0){
+            board.satisfyCell(x,y);
+            for (int[] neighbor : neighbors){
+                int w = neighbor[0];
+                int h = neighbor[1];
+                if (!board.getFlagged()[w][h]){
+                    board.uncoverCell(w, h);
+                    solver(board, w, h);
+                }
+            }
+
+        }
+        if (board.getBoard()[x][y] == c){
+            for (int[] neighbor : neighbors){
+                int w = neighbor[0];
+                int h = neighbor[1];
+                board.flagCell(w, h);
+                //solver(board, w, h);
+            }
+        }
         int flag = 0;
         for (int[] neighbor : neighbors){
             int w = neighbor[0];
@@ -335,20 +351,7 @@ public class MinesweeperSolver {
             }
         }
         if (board.getBoard()[x][y] < flag){
-            
             return;
-        }
-        if (board.getBoard()[x][y] == 0){
-            board.satisfyCell(x,y);
-            for (int[] neighbor : neighbors){
-                int w = neighbor[0];
-                int h = neighbor[1];
-                if (!board.getFlagged()[w][h]){
-                    board.uncoverCell(w, h);
-                    solver(board, w, h);
-                }
-            }
-
         }
         if (board.getBoard()[x][y] == flag){
             board.satisfyCell(x,y);
@@ -361,7 +364,6 @@ public class MinesweeperSolver {
                 }
             }
         }
-        
         if(board.getBoard()[x][y] - flag > 0){
             ArrayList<ArrayList<int[]>> combos = new ArrayList<>();
             ArrayList<int[]> neighborNoFlag = new ArrayList<>();
@@ -391,14 +393,6 @@ public class MinesweeperSolver {
                         solver(tempBoard, w, h);
                     }
                 }
-            }
-        }
-        if (board.getBoard()[x][y] == c){
-            for (int[] neighbor : neighbors){
-                int w = neighbor[0];
-                int h = neighbor[1];
-                board.flagCell(w, h);
-                solver(board, w, h);
             }
         }
     }
